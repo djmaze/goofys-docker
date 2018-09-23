@@ -1,0 +1,45 @@
+{
+    "description": "Goofys plugin for Docker",
+    "documentation": "https://docs.docker.com/engine/extend/plugins/",
+    "entrypoint": [
+        "/docker-volume-goofys"
+    ],
+    "env": [
+        {
+            "name": "DEBUG",
+            "settable": [
+                "value"
+            ],
+            "value": "0"
+        }
+    ],
+    "interface": {
+        "socket": "goofys.sock",
+        "types": [
+            "docker.volumedriver/1.0"
+        ]
+    },
+    "linux": {
+        "capabilities": [
+            "CAP_SYS_ADMIN",
+            "CAP_MKNOD"
+        ],
+        "allowAllDevices": false,
+        "devices": [
+          {
+            "path": "/dev/fuse",
+            "type": "c",
+            "major": 10,
+            "minor": 229,
+            "fileMode": 438,
+            "uid": 0,
+            "gid": 0
+          }
+        ]
+    },
+    "mounts": [],
+    "network": {
+        "type": "host"
+    },
+    "propagatedmount": "/var/lib/docker-volumes"
+}

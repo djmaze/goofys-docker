@@ -14,7 +14,7 @@ import (
 
 	"path/filepath"
 
-	goofys "github.com/anrim/goofys-docker/internal"
+	goofys "github.com/djmaze/docker-volume-goofys/internal"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/docker/go-plugins-helpers/volume"

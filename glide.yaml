@@ -1,4 +1,4 @@
-package: github.com/anrim/goofys-docker
+package: github.com/djmaze/docker-volume-goofys
 import:
 - package: github.com/docker/go-plugins-helpers
   subpackages:

@@ -25,4 +25,5 @@ _testmain.go
 
 .DS_Store
 goofys-docker
+plugin
 vendor
