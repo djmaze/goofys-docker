@@ -203,6 +203,34 @@ func (d *s3Driver) mountBucket(name string, volumeName string) error {
 			config.DebugS3 = s
 		}
 	}
+  if uidString, ok := d.volumes[volumeName]["uid"]; ok {
+    uid, err := strconv.ParseUint(uidString, 10, 32)
+    if err != nil {
+      return errors.New("uid must be uint32")
+    }
+    config.Uid = uint32(uid)
+  }
+  if gidString, ok := d.volumes[volumeName]["gid"]; ok {
+    gid, err := strconv.ParseUint(gidString, 10, 32)
+    if err != nil {
+      return errors.New("gid must be uint32")
+    }
+    config.Gid = uint32(gid)
+  }
+  if dirModeString, ok := d.volumes[volumeName]["dir-mode"]; ok {
+    dirMode, err := strconv.ParseUint(dirModeString, 8, 32)
+    if err != nil {
+      return errors.New("dir-mode must be given in octal format")
+    }
+    config.DirMode = os.FileMode(dirMode)
+  }
+  if fileModeString, ok := d.volumes[volumeName]["file-mode"]; ok {
+    fileMode, err := strconv.ParseUint(fileModeString, 8, 32)
+    if err != nil {
+      return errors.New("file-mode must be given in octal format")
+    }
+    config.FileMode = os.FileMode(fileMode)
+  }
 
 	log.Printf("Create Goofys for bucket %s\n", bucket)
 
