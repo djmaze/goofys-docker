@@ -1,59 +1,101 @@
-hash: e682d49e0cd8bc6ae271c87a24a82760d64dd6e5b7f77e2dc7d1518ffe7853ce
-updated: 2017-03-01T21:24:31.805826444-08:00
+hash: 045a38408caaad615df5a558a961e68043017942b930c16f9263dc97e77e730c
+updated: 2018-09-23T16:36:34.610460234Z
 imports:
 - name: github.com/aws/aws-sdk-go
-  version: 6669bce73b4e3bc922ff5ea3a3983ede26e02b39
+  version: 695fe24acaf9afe80b0ce261d4637f42ba0b4c7d
   subpackages:
   - aws
   - aws/awserr
+  - aws/awsutil
+  - aws/client
+  - aws/client/metadata
+  - aws/corehandlers
   - aws/credentials
+  - aws/credentials/ec2rolecreds
+  - aws/credentials/endpointcreds
+  - aws/credentials/stscreds
+  - aws/defaults
+  - aws/ec2metadata
   - aws/endpoints
-- name: github.com/codegangsta/cli
-  version: 0bdeddeeb0f650497d603c4ad7b20cfe685682f6
+  - aws/request
+  - aws/session
+  - aws/signer/v4
+  - private/protocol
+  - private/protocol/query
+  - private/protocol/query/queryutil
+  - private/protocol/rest
+  - private/protocol/restxml
+  - private/protocol/xml/xmlutil
+  - private/waiter
+  - service/s3
+  - service/sts
 - name: github.com/coreos/go-systemd
-  version: e97b35f834b17eaa82afe3d44715c34736bfa12b
+  version: eee3db372b31153ca0b90702e165948699803fd0
   subpackages:
   - activation
-- name: github.com/docker/docker
-  version: d8b0d2b9e9e3d4b2537a2ebbbb8f6187ea755286
-  subpackages:
-  - volume
 - name: github.com/docker/go-connections
-  version: a2afab9802043837035592f1c24827fb70766de9
+  version: 97c2040d34dfae1d1b1275fa3a78dbdd2f41cf7e
   subpackages:
   - sockets
 - name: github.com/docker/go-plugins-helpers
-  version: 8af45ff6ad5b7608853de51133c33e6638b02134
+  version: 39aeefe5db4eb2034cdc56ff43a86f63b4b543bc
   subpackages:
   - sdk
   - volume
 - name: github.com/go-ini/ini
-  version: c437d20015c2ab6454b7a66a13109ff0fb99e17a
+  version: fa25069db393aecc09b71267d0489b357781c860
+- name: github.com/go-ole/go-ole
+  version: 7a0fa49edf48165190530c675167e2f319a05268
+  subpackages:
+  - oleutil
 - name: github.com/jacobsa/fuse
-  version: dc1be2d5b8abc34991a649f7499f9f673e36bb46
+  version: cd3959611bcb6bb23d49f1598d98f2bf44476805
   subpackages:
   - fuseops
   - fuseutil
   - internal/buffer
   - internal/freelist
   - internal/fusekernel
+- name: github.com/jinzhu/copier
+  version: 7e38e58719c33e0d44d585c4ab477a30f8cb82dd
+- name: github.com/jmespath/go-jmespath
+  version: c2b33e8439af944379acbdd9c3a5fe0bc44bd8a5
 - name: github.com/kahing/goofys
-  version: 321f73d431cdde4e1f3efe16ab0a0a7a40eb90d6
-- name: github.com/Microsoft/go-winio
-  version: fff283ad5116362ca252298cfc9b95828956d85d
-- name: github.com/shirou/gopsutil
-  version: d371ba1293cb48fedc6850526ea48b3846c54f2c
+  version: c060e1921aa093774806d4e62cbcae5d8c869cfd
+  repo: https://github.com/djmaze/goofys
   subpackages:
+  - api
+  - internal
+- name: github.com/konsorten/go-windows-terminal-sequences
+  version: b729f2633dfe35f4d1d8a32385f6685610ce1cb5
+- name: github.com/Microsoft/go-winio
+  version: 97e4973ce50b2ff5f09635a57e2b88a037aae829
+- name: github.com/shirou/gopsutil
+  version: 7ec06ec280df1dd1f08befc535049d49d63ae18a
+  subpackages:
+  - internal/common
   - mem
-- name: github.com/Sirupsen/logrus
-  version: 0208149b40d863d2c1a2f8fe5753096a9cf2cc8b
+- name: github.com/sirupsen/logrus
+  version: 33a1e118e113c7d1dd24a80f80670864cd598519
+  subpackages:
+  - hooks/syslog
+- name: github.com/StackExchange/wmi
+  version: b12b22c5341f0c26d88c4d66176330500e84db68
+- name: github.com/urfave/cli
+  version: 934abfb2f102315b5794e15ebc7949e4ca253920
+- name: golang.org/x/crypto
+  version: 0e37d006457bf46f9e6692014ba72ef82c33022c
+  subpackages:
+  - ssh/terminal
 - name: golang.org/x/net
-  version: 906cda9512f77671ab44f8c8563b13a8e707b230
+  version: 2f5d2388922f370f4355f327fcf4cfe9f5583908
   subpackages:
   - context
+  - internal/socks
   - proxy
 - name: golang.org/x/sys
-  version: 76cc09b634294339fa19ec41b5f2a0b3932cea8b
+  version: d47a0f3392421c5624713c9a19fe781f651f8a50
   subpackages:
+  - unix
   - windows
 testImports: []

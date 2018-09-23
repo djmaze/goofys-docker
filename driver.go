@@ -1,6 +1,8 @@
 package main
 
 import (
+  "context"
+  "errors"
 	"strconv"
 	"sync"
 
@@ -10,15 +12,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/jacobsa/fuse"
-
 	"path/filepath"
 
-	goofys "github.com/djmaze/docker-volume-goofys/internal"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/docker/go-plugins-helpers/volume"
-	"github.com/jacobsa/fuse/fuseutil"
+	goofys "github.com/kahing/goofys/api"
+	volume "github.com/docker/go-plugins-helpers/volume"
 )
 
 type s3Driver struct {
@@ -37,29 +34,29 @@ func newS3Driver(root string) s3Driver {
 	}
 }
 
-func (d s3Driver) Create(r volume.Request) volume.Response {
+func (d s3Driver) Create(r *volume.CreateRequest) error {
 	log.Printf("Creating volume %s\n", r.Name)
 	d.m.Lock()
 	defer d.m.Unlock()
 	d.volumes[r.Name] = r.Options
-	return volume.Response{}
+	return nil
 }
 
-func (d s3Driver) Get(r volume.Request) volume.Response {
+func (d s3Driver) Get(r *volume.GetRequest) (*volume.GetResponse, error) {
 	d.m.Lock()
 	defer d.m.Unlock()
 	if _, exists := d.volumes[r.Name]; exists {
-		return volume.Response{
+		return &volume.GetResponse{
 			Volume: &volume.Volume{
 				Name:       r.Name,
 				Mountpoint: d.mountpoint(r.Name),
 			},
-		}
+		}, nil
 	}
-	return volume.Response{Err: fmt.Sprintf("Unable to find volume mounted on %s", d.mountpoint(r.Name))}
+	return nil, errors.New(fmt.Sprintf("Unable to find volume mounted on %s", d.mountpoint(r.Name)))
 }
 
-func (d s3Driver) List(r volume.Request) volume.Response {
+func (d s3Driver) List() (*volume.ListResponse, error) {
 	d.m.Lock()
 	defer d.m.Unlock()
 	var volumes []*volume.Volume
@@ -69,12 +66,12 @@ func (d s3Driver) List(r volume.Request) volume.Response {
 			Mountpoint: d.mountpoint(k),
 		})
 	}
-	return volume.Response{
+	return &volume.ListResponse{
 		Volumes: volumes,
-	}
+	}, nil
 }
 
-func (d s3Driver) Remove(r volume.Request) volume.Response {
+func (d s3Driver) Remove(r *volume.RemoveRequest) error {
 	log.Printf("Removing volume %s\n", r.Name)
 	d.m.Lock()
 	defer d.m.Unlock()
@@ -85,16 +82,16 @@ func (d s3Driver) Remove(r volume.Request) volume.Response {
 		delete(d.connections, bucket)
 	}
 	delete(d.volumes, r.Name)
-	return volume.Response{}
+	return nil
 }
 
-func (d s3Driver) Path(r volume.Request) volume.Response {
-	return volume.Response{
+func (d s3Driver) Path(r *volume.PathRequest) (*volume.PathResponse, error) {
+	return &volume.PathResponse{
 		Mountpoint: d.mountpoint(r.Name),
-	}
+	}, nil
 }
 
-func (d s3Driver) Mount(r volume.MountRequest) volume.Response {
+func (d s3Driver) Mount(r *volume.MountRequest) (*volume.MountResponse, error) {
 	d.m.Lock()
 	defer d.m.Unlock()
 
@@ -105,39 +102,43 @@ func (d s3Driver) Mount(r volume.MountRequest) volume.Response {
 	count, exists := d.connections[bucket]
 	if exists && count > 0 {
 		d.connections[bucket] = count + 1
-		return volume.Response{Mountpoint: d.mountpoint(r.Name)}
+		return &volume.MountResponse{Mountpoint: d.mountpoint(r.Name)}, nil
 	}
 
 	fi, err := os.Lstat(d.mountpoint(bucket))
 
 	if os.IsNotExist(err) {
 		if err := os.MkdirAll(d.mountpoint(bucket), 0755); err != nil {
-			return volume.Response{Err: err.Error()}
+			return nil, err
 		}
 	} else if err != nil {
 		if e, ok := err.(*os.PathError); ok && e.Err == syscall.ENOTCONN {
 			// Crashed previously? Unmount
-			fuse.Unmount(d.mountpoint(bucket))
+      err := goofys.TryUnmount(d.mountpoint(bucket))
+      if err != nil {
+        err2 := fmt.Errorf("Failed to unmount: %v", err)
+        return nil, err2
+      }
 		} else {
-			return volume.Response{Err: err.Error()}
+			return nil, err
 		}
 	}
 
 	if fi != nil && !fi.IsDir() {
-		return volume.Response{Err: fmt.Sprintf("%v already exist and it's not a directory", d.mountpoint(bucket))}
+		return nil, errors.New(fmt.Sprintf("%v already exist and it's not a directory", d.mountpoint(bucket)))
 	}
 
 	err = d.mountBucket(bucket, r.Name)
 	if err != nil {
-		return volume.Response{Err: err.Error()}
+		return nil, err
 	}
 
 	d.connections[bucket] = 1
 
-	return volume.Response{Mountpoint: d.mountpoint(r.Name)}
+	return &volume.MountResponse{Mountpoint: d.mountpoint(r.Name)}, nil
 }
 
-func (d s3Driver) Unmount(r volume.UnmountRequest) volume.Response {
+func (d s3Driver) Unmount(r *volume.UnmountRequest) error {
 	d.m.Lock()
 	defer d.m.Unlock()
 
@@ -148,15 +149,18 @@ func (d s3Driver) Unmount(r volume.UnmountRequest) volume.Response {
 	if count, exists := d.connections[bucket]; exists {
 		if count == 1 {
 			mountpoint := d.mountpoint(bucket)
-			fuse.Unmount(mountpoint)
+      err := goofys.TryUnmount(mountpoint)
+      if err != nil {
+        log.Printf("Failed to unmount: %v", err)
+      }
 			os.Remove(mountpoint)
 		}
 		d.connections[bucket] = count - 1
 	} else {
-		return volume.Response{Err: fmt.Sprintf("Unable to find volume mounted on %s", d.mountpoint(bucket))}
+		return errors.New(fmt.Sprintf("Unable to find volume mounted on %s", d.mountpoint(bucket)))
 	}
 
-	return volume.Response{}
+	return nil
 }
 
 func (d *s3Driver) mountpoint(name string) string {
@@ -165,14 +169,12 @@ func (d *s3Driver) mountpoint(name string) string {
 
 func (d *s3Driver) mountBucket(name string, volumeName string) error {
 
-	awsConfig := &aws.Config{
-		DisableSSL:       aws.Bool(false),
-		S3ForcePathStyle: aws.Bool(true),
-		Region:           aws.String("us-east-1"),
-	}
-	goofysFlags := &goofys.FlagStorage{
-		StorageClass: "STANDARD",
-	}
+  config := &goofys.Config{
+    MountPoint:       d.mountpoint(name),
+    MountOptions:     map[string]string{"allow_other": ""},
+		Region:           "us-east-1",
+		StorageClass:     "STANDARD",
+  }
 
 	bucket := name
 	if bkt, ok := d.volumes[volumeName]["bucket"]; ok {
@@ -182,51 +184,39 @@ func (d *s3Driver) mountBucket(name string, volumeName string) error {
 		bucket = bucket + ":" + prefix
 	}
   if endpoint, ok := d.volumes[volumeName]["endpoint"]; ok {
-    awsConfig.Endpoint = aws.String(endpoint)
+    config.Endpoint = endpoint
   }
   if access_key, ok := d.volumes[volumeName]["access_key"]; ok {
     if secret_key, ok := d.volumes[volumeName]["secret_key"]; ok {
-      awsConfig.Credentials = credentials.NewStaticCredentials(access_key, secret_key, "")
+      config.AccessKey = access_key
+      config.SecretKey = secret_key
     }
   }
 	if region, ok := d.volumes[volumeName]["region"]; ok {
-		awsConfig.Region = aws.String(region)
+		config.Region = region
 	}
 	if storageClass, ok := d.volumes[volumeName]["storage-class"]; ok {
-		goofysFlags.StorageClass = storageClass
+		config.StorageClass = storageClass
 	}
 	if debugS3, ok := d.volumes[volumeName]["debugs3"]; ok {
 		if s, err := strconv.ParseBool(debugS3); err == nil {
-			goofysFlags.DebugS3 = s
+			config.DebugS3 = s
 		}
 	}
 
 	log.Printf("Create Goofys for bucket %s\n", bucket)
-	g := goofys.NewGoofys(bucket, awsConfig, goofysFlags)
-	if g == nil {
-		err := fmt.Errorf("Goofys: initialization failed")
-		return err
-	}
-	server := fuseutil.NewFileSystemServer(g)
 
-	mountCfg := &fuse.MountConfig{
-		FSName:                  name,
-		Options:                 map[string]string{"allow_other": ""},
-		DisableWritebackCaching: true,
-	}
-
-	_, err := fuse.Mount(d.mountpoint(name), server, mountCfg)
-	if err != nil {
-		err = fmt.Errorf("Mount: %v", err)
+  _, _, err := goofys.Mount(context.TODO(), bucket, config)
+  if err != nil {
 		return err
-	}
+  }
 
 	return nil
 }
 
-func (d s3Driver) Capabilities(r volume.Request) volume.Response {
-	log.Printf("Capabilities %+v\n", r)
-	return volume.Response{
+func (d s3Driver) Capabilities() *volume.CapabilitiesResponse {
+	log.Printf("Capabilities\n")
+	return &volume.CapabilitiesResponse{
 		Capabilities: volume.Capability{Scope: "local"},
 	}
 }

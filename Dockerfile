@@ -1,5 +1,5 @@
 # Builder image
-FROM golang:1.8-alpine AS builder
+FROM golang:1.10-alpine AS builder
 
 WORKDIR /go/src/github.com/djmaze/docker-volume-goofys
 
