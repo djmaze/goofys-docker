@@ -16,6 +16,7 @@ import (
 
 	goofys "github.com/anrim/goofys-docker/internal"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/docker/go-plugins-helpers/volume"
 	"github.com/jacobsa/fuse/fuseutil"
 )
@@ -180,6 +181,14 @@ func (d *s3Driver) mountBucket(name string, volumeName string) error {
 	if prefix, ok := d.volumes[volumeName]["prefix"]; ok {
 		bucket = bucket + ":" + prefix
 	}
+  if endpoint, ok := d.volumes[volumeName]["endpoint"]; ok {
+    awsConfig.Endpoint = aws.String(endpoint)
+  }
+  if access_key, ok := d.volumes[volumeName]["access_key"]; ok {
+    if secret_key, ok := d.volumes[volumeName]["secret_key"]; ok {
+      awsConfig.Credentials = credentials.NewStaticCredentials(access_key, secret_key, "")
+    }
+  }
 	if region, ok := d.volumes[volumeName]["region"]; ok {
 		awsConfig.Region = aws.String(region)
 	}
