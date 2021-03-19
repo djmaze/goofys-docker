@@ -25,14 +25,20 @@ type s3Driver struct {
 	connections map[string]int
 	volumes     map[string]map[string]string
 	m           *sync.Mutex
+  endpoint string
+  accessKey string
+  secretKey string
 }
 
-func newS3Driver(root string) s3Driver {
+func newS3Driver(root string, endpoint string, accessKey string, secretKey string) s3Driver {
 	return s3Driver{
 		root:        root,
 		connections: map[string]int{},
 		volumes:     map[string]map[string]string{},
 		m:           &sync.Mutex{},
+		endpoint: endpoint,
+		accessKey: accessKey,
+		secretKey: secretKey,
 	}
 }
 
@@ -189,13 +195,20 @@ func (d *s3Driver) mountBucket(name string, volumeName string) error {
 	}
   if endpoint, ok := d.volumes[volumeName]["endpoint"]; ok {
     config.Endpoint = endpoint
-  }
+  } else {
+		if (d.endpoint != "") {
+			config.Endpoint = d.endpoint
+		}
+	}
   if access_key, ok := d.volumes[volumeName]["access_key"]; ok {
     if secret_key, ok := d.volumes[volumeName]["secret_key"]; ok {
       s3Config.AccessKey = access_key
       s3Config.SecretKey = secret_key
     }
-  }
+  } else {
+		s3Config.AccessKey = d.accessKey
+		s3Config.SecretKey = d.secretKey
+	}
 	if region, ok := d.volumes[volumeName]["region"]; ok {
 		s3Config.Region = region
 	}

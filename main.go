@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 	"path/filepath"
 	"syscall"
 
@@ -22,7 +23,11 @@ var (
 func main() {
 	flag.Parse()
 
-	d := newS3Driver(*root)
+  endpoint := os.Getenv("ENDPOINT")
+  accessKey := os.Getenv("ACCESS_KEY")
+  secretKey := os.Getenv("SECRET_KEY")
+
+	d := newS3Driver(*root, endpoint, accessKey, secretKey)
 	h := volume.NewHandler(d)
 
 	fmt.Printf("Listening on %s\n", socketAddress)

@@ -11,6 +11,27 @@
                 "value"
             ],
             "value": "0"
+        },
+        {
+            "name": "ENDPOINT",
+            "settable": [
+                "value"
+            ],
+            "value": ""
+        },
+        {
+            "name": "ACCESS_KEY",
+            "settable": [
+                "value"
+            ],
+            "value": ""
+        },
+        {
+            "name": "SECRET_KEY",
+            "settable": [
+                "value"
+            ],
+            "value": ""
         }
     ],
     "interface": {
