@@ -1,10 +1,11 @@
 package main
 
 import (
-  "context"
-  "errors"
+	"context"
+	"errors"
 	"strconv"
 	"sync"
+	"time"
 
 	"fmt"
 	"log"
@@ -14,8 +15,9 @@ import (
 
 	"path/filepath"
 
-	goofys "github.com/kahing/goofys/api"
 	volume "github.com/docker/go-plugins-helpers/volume"
+	goofys "github.com/ppenguin/goofys/api"
+	common "github.com/ppenguin/goofys/api/common"
 )
 
 type s3Driver struct {
@@ -169,12 +171,14 @@ func (d *s3Driver) mountpoint(name string) string {
 
 func (d *s3Driver) mountBucket(name string, volumeName string) error {
 
-  config := &goofys.Config{
+	config := common.FlagStorage{
     MountPoint:       d.mountpoint(name),
-    MountOptions:     map[string]string{"allow_other": ""},
-		Region:           "us-east-1",
-		StorageClass:     "STANDARD",
-  }
+  	MountOptions:     map[string]string{"allow_other": ""},
+		StatCacheTTL: time.Minute,
+		TypeCacheTTL: time.Minute,
+	}
+
+	s3Config := (&common.S3Config{}).Init()
 
 	bucket := name
 	if bkt, ok := d.volumes[volumeName]["bucket"]; ok {
@@ -188,21 +192,33 @@ func (d *s3Driver) mountBucket(name string, volumeName string) error {
   }
   if access_key, ok := d.volumes[volumeName]["access_key"]; ok {
     if secret_key, ok := d.volumes[volumeName]["secret_key"]; ok {
-      config.AccessKey = access_key
-      config.SecretKey = secret_key
+      s3Config.AccessKey = access_key
+      s3Config.SecretKey = secret_key
     }
   }
 	if region, ok := d.volumes[volumeName]["region"]; ok {
-		config.Region = region
+		s3Config.Region = region
 	}
 	if storageClass, ok := d.volumes[volumeName]["storage-class"]; ok {
-		config.StorageClass = storageClass
+		s3Config.StorageClass = storageClass
+	}
+	if acl, ok := d.volumes[volumeName]["acl"]; ok {
+		s3Config.ACL = acl
+	} else {
+		s3Config.ACL = "private"
 	}
 	if debugS3, ok := d.volumes[volumeName]["debugs3"]; ok {
 		if s, err := strconv.ParseBool(debugS3); err == nil {
 			config.DebugS3 = s
 		}
 	}
+  if useCacheString, ok := d.volumes[volumeName]["use-cache"]; ok {
+		if useCache, err := strconv.ParseBool(useCacheString); err == nil {
+      if useCache {
+        config.Cache = []string{config.MountPoint, "/tmp", config.MountPoint, "--free", "50%", "-oallow_other", "-ononempty"}
+      }
+    }
+  }
   if uidString, ok := d.volumes[volumeName]["uid"]; ok {
     uid, err := strconv.ParseUint(uidString, 10, 32)
     if err != nil {
@@ -223,21 +239,39 @@ func (d *s3Driver) mountBucket(name string, volumeName string) error {
       return errors.New("dir-mode must be given in octal format")
     }
     config.DirMode = os.FileMode(dirMode)
-  }
+  } else {
+    dirMode, _ := strconv.ParseUint("0755", 8, 32)
+		config.DirMode = os.FileMode(dirMode)
+	}
   if fileModeString, ok := d.volumes[volumeName]["file-mode"]; ok {
     fileMode, err := strconv.ParseUint(fileModeString, 8, 32)
     if err != nil {
       return errors.New("file-mode must be given in octal format")
     }
     config.FileMode = os.FileMode(fileMode)
-  }
+  } else {
+    fileMode, _ := strconv.ParseUint("0644", 8, 32)
+		config.FileMode = os.FileMode(fileMode)
+	}
+  if cheapString, ok := d.volumes[volumeName]["cheap"]; ok {
+		if cheap, err := strconv.ParseBool(cheapString); err == nil {
+      if cheap {
+				log.Printf("Cheap mode\n")
+				config.Cheap = true
+			}
+		}
+	}
+
+	config.Backend = s3Config
 
 	log.Printf("Create Goofys for bucket %s\n", bucket)
 
-  _, _, err := goofys.Mount(context.TODO(), bucket, config)
+  _, _, err := goofys.Mount(context.Background(), bucket, &config)
   if err != nil {
 		return err
   }
+
+	log.Printf("Goofys mounted for bucket %s\n", bucket)
 
 	return nil
 }
