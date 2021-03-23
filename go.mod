@@ -33,3 +33,5 @@ require (
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 )
+
+replace github.com/ppenguin/goofys => github.com/djmaze/goofys v0.24.1-0.20210323170755-01743b229951
